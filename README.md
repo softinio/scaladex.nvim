@@ -37,7 +37,7 @@ require'telescope'.load_extension'scaladex`
 Add a mapping to open search box:
 
 ```
-vim.api.nvim_set_keymap('n', '<leader>si', [[<cmd>lua require('scaladex').search()<cr>]], { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>si', [[<cmd>lua require('telescope').extensions.scaladex.scaladex.search()<cr>]], { noremap = true, silent = true })
 ```
 
 ## Usage
