@@ -33,7 +33,7 @@ use { 'softinio/scaladex.nvim' }
 Require the extension:
 
 ```
-require'telescope'.load_extension'scaladex`
+require('telescope').load_extension('scaladex')
 ```
 
 Add a mapping to open search box:
