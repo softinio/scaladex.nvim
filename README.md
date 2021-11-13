@@ -40,6 +40,8 @@ Add a mapping to open search box:
 vim.api.nvim_set_keymap('n', '<leader>si', [[<cmd>lua require('telescope').extensions.scaladex.scaladex.search()<cr>]], { noremap = true, silent = true })
 ```
 
+Sample [PR](https://github.com/softinio/nix-config/pull/4/files) updating my config.
+
 ## Usage
 
 ### Telescope
