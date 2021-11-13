@@ -1,3 +1,5 @@
+[![scaladex.nvim lint](https://github.com/softinio/scaladex.nvim/actions/workflows/lint.yml/badge.svg)](https://github.com/softinio/scaladex.nvim/actions/workflows/lint.yml)
+
 # scaladex.nvim
 
 This [neovim](https://neovim.io/) plugin serves two purposes:
