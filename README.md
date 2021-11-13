@@ -25,7 +25,7 @@ Add the following to your `init.lua`:
 
 ```
 use { 'nvim-telescope/telescope.nvim', requires = { { 'nvim-lua/popup.nvim' }, { 'nvim-lua/plenary.nvim' } } }
-use { 'softinio/telescope-scaladex.nvim' }
+use { 'softinio/scaladex.nvim' }
 ```
 
 Require the extension:
