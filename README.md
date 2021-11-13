@@ -49,8 +49,9 @@ vim.api.nvim_set_keymap('n', '<leader>si', [[<cmd>lua require('scaladex').search
 3. From the results panel select the one you are interested in, then:
 
 | Keyboard | What it does |
-| <C-s> | Opens the browser, scaladex page for the package you selected |
-| <C-R> (enter) | Copies to your clipboard what you need to add to your build file to add dependency to your project |
+| -------- | ------------ |
+| `<C-s>` | Opens the browser, scaladex page for the package you selected |
+| `<C-R>` (i.e. enter) | Copies to your clipboard what you need to add to your build file to add dependency to your project |
 
 ### Use as a Library
 
