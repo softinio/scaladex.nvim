@@ -50,7 +50,8 @@ Sample [PR](https://github.com/softinio/nix-config/pull/4/files) updating my con
 
 1. Open search (if above mapping set that would be your `<leader>` key and `si`)
 2. Enter package you are searching for and press enter, e.g. `cats`
-3. From the results panel select the one you are interested in, then:
+3. Select artifact
+4. From the results panel select the one you are interested in, then:
 
 | Keyboard | What it does |
 | -------- | ------------ |
