@@ -63,7 +63,42 @@ M.package_search = function(opts, results)
         if next(selected) ~= nil then
           local value = selected["value"]
           local selection = scaladex.get_project(value["organization"], value["repository"])
-          local dep = helpers.create_dependency_string(selection)
+          M.artifacts(opts, selection)
+        end
+      end)
+      return true
+    end,
+  }):find()
+end
+
+M.artifacts = function(opts, results)
+  opts = opts or {}
+  pickers.new(opts, {
+    prompt_title = "scaladex artifact selection",
+    sorter = conf.generic_sorter(opts),
+    layout_strategy = "vertical",
+    layout_config = {
+      height = 10,
+      width = 0.3,
+      prompt_position = "bottom",
+    },
+    finder = finders.new_table({
+      results = results["artifacts"],
+      entry_maker = function(entry)
+        return {
+          value = entry,
+          display = entry,
+          ordinal = entry,
+        }
+      end,
+    }),
+    attach_mappings = function(prompt_bufnr, map)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        local selected = action_state.get_selected_entry()
+        if next(selected) ~= nil then
+          local value = selected["value"]
+          local dep = helpers.create_dependency_string(results, value)
           helpers.copy_to_clipboard(dep)
         end
       end)
