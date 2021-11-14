@@ -17,13 +17,25 @@ M.create_dependency_string = function(artifact)
   local is_mill = contains(project_root, "build.sc")
   local current_filetype = vim.bo.filetype
   if current_filetype == "sbt" or (current_filetype == "scala" and is_sbt == true) then
-    local result = artifact["groupId"] .. " %% " .. artifact["artifactId"] .. " % " .. artifact["version"]
+    local result = '"'
+      .. artifact["groupId"]
+      .. '" %% "'
+      .. artifact["artifactId"]
+      .. '" % "'
+      .. artifact["version"]
+      .. '"'
     return result
   elseif is_mill == true then
     local result = 'ivy"' .. artifact["groupId"] .. "::" .. artifact["artifactId"] .. ":" .. artifact["version"] .. '"'
     return result
   else
-    local result = "import $ivy." .. artifact["groupId"] .. "::" .. artifact["artifactId"] .. ":" .. artifact["version"]
+    local result = "import $ivy.`"
+      .. artifact["groupId"]
+      .. "::"
+      .. artifact["artifactId"]
+      .. ":"
+      .. artifact["version"]
+      .. "`"
     return result
   end
 end
