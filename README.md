@@ -110,6 +110,7 @@ nvim --cmd "set rtp+=$(pwd)"
 
 ## To Do
 
+- [ ] add some unit tests
 - [ ] make rest calls async using plenary
 - [ ] add support for `scala-cli`
 - [ ] add support for `maven` and `gradle`
