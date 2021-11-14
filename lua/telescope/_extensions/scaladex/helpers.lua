@@ -23,12 +23,7 @@ M.create_dependency_string = function(artifact)
     local result = 'ivy"' .. artifact["groupId"] .. "::" .. artifact["artifactId"] .. ":" .. artifact["version"] .. '"'
     return result
   else
-    local result = "import $ivy."
-      .. artifact["groupId"]
-      .. "::"
-      .. artifact["artifactId"]
-      .. ":"
-      .. artifact["version"]
+    local result = "import $ivy." .. artifact["groupId"] .. "::" .. artifact["artifactId"] .. ":" .. artifact["version"]
     return result
   end
 end
