@@ -112,5 +112,4 @@ M.artifacts = function(opts, results, organization, repository)
   }):find()
 end
 
--- return M
-M.search()
+return M
