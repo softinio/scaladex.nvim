@@ -91,9 +91,9 @@ scaladex.search('cats')
 scaladex.get_project('typelevel', 'cats')
 ```
 
-## Demo and screenshots
+## Demo and Video Tutorial on using `scaladex.nvim`
 
-TBA
+[Using scaladex.nvim](https://watch.softinio.com/w/44bD8ASpSkzmKifDBNMBkr)
 
 ## Support and Help
 
