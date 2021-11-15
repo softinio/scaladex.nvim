@@ -63,7 +63,7 @@ M.package_search = function(opts, results)
         if next(selected) ~= nil then
           local value = selected["value"]
           local selection = scaladex.get_project(value["organization"], value["repository"])
-          M.artifacts(opts, selection)
+          M.artifacts(opts, selection, value["organization"], value["repository"])
         end
       end)
       return true
@@ -71,7 +71,7 @@ M.package_search = function(opts, results)
   }):find()
 end
 
-M.artifacts = function(opts, results)
+M.artifacts = function(opts, results, organization, repository)
   opts = opts or {}
   pickers.new(opts, {
     prompt_title = "scaladex artifact selection",
@@ -102,18 +102,15 @@ M.artifacts = function(opts, results)
           helpers.copy_to_clipboard(dep)
         end
       end)
-      map("n", "<c-s>", function()
+      map("i", "<C-s>", function()
         actions.close(prompt_bufnr)
-        local selected = action_state.get_selected_entry()
-        if next(selected) ~= nil then
-          local value = selected["value"]
-          local url = "https://index.scala-lang.org/" .. value["organization"] .. "/" .. value["repository"]
-          helpers.open_browser(url)
-        end
+        local url = "https://index.scala-lang.org/" .. organization .. "/" .. repository
+        helpers.open_browser(url)
       end)
       return true
     end,
   }):find()
 end
 
-return M
+-- return M
+M.search()
