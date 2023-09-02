@@ -4,7 +4,7 @@ local M = {}
 
 local function contains(list, text)
   for _, v in pairs(list) do
-    if v == text then
+    if string.find(v, text) then
       return true
     end
   end
