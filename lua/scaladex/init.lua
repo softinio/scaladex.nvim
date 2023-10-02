@@ -30,11 +30,8 @@ M.search = function(query, target, scalaVersion)
     v = v,
   }
 
-  local url = string.gsub(
-    "https://index.scala-lang.org/api/search?q=$q&target=$t&scalaVersion=$v",
-    "$(%w+)",
-    parameters
-  )
+  local url =
+    string.gsub("https://index.scala-lang.org/api/search?q=$q&target=$t&scalaVersion=$v", "$(%w+)", parameters)
 
   local response = curl.request({
     url = url,
