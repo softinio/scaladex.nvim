@@ -13,6 +13,6 @@ contact us immediately so that we can support you.
 
 For any questions, concerns, or moderation requests please contact a member of the project.
 
-- [Salar Rahmanian](https://forms.gle/f793c7jHzhRFpb2R6)
+- [Salar Rahmanian](whinier.bulgar3j@icloud.com)
 
 [Scala Code of Conduct]: https://www.scala-lang.org/conduct/
