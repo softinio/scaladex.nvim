@@ -30,10 +30,17 @@ M.check = function()
 
   health.info("Choosing a module does: " .. config.action)
 
+  local ui = require("scaladex.ui")
+  if ui.use_snacks() then
+    health.ok("`:Scaladex` uses the snacks.nvim picker (picker = " .. config.picker .. ")")
+  elseif config.picker == "snacks" then
+    health.warn('picker = "snacks" but snacks.nvim is not installed; `:Scaladex` uses vim.ui.select')
+  else
+    health.info("`:Scaladex` uses vim.ui.select (picker = " .. config.picker .. ")")
+  end
+
   if pcall(require, "telescope") then
     health.ok("Telescope found: `:Telescope scaladex` is available")
-  else
-    health.info("Telescope not found; `:Scaladex` uses vim.ui.select")
   end
 end
 

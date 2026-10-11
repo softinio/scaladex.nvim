@@ -9,9 +9,10 @@ CONTENTS                                                   *scaladex-contents*
   4. Configuration .............................. |scaladex-configuration|
   5. Build tools ................................ |scaladex-build-tools|
   6. Filters .................................... |scaladex-filters|
-  7. Telescope .................................. |scaladex-telescope|
-  8. Lua API .................................... |scaladex-api|
-  9. Health ..................................... |scaladex-health|
+  7. snacks.nvim ................................ |scaladex-snacks|
+  8. Telescope .................................. |scaladex-telescope|
+  9. Lua API .................................... |scaladex-api|
+ 10. Health ..................................... |scaladex-health|
 
 ==============================================================================
 1. INTRODUCTION                                        *scaladex-introduction*
@@ -28,7 +29,8 @@ Requests run in the background and never block the editor.
 
 - Neovim 0.10 or later
 - `curl` on your `PATH`
-- Optional: telescope.nvim, for |scaladex-telescope|
+- Optional: snacks.nvim (|scaladex-snacks|) or telescope.nvim
+  (|scaladex-telescope|), for pickers with previews
 
 ==============================================================================
 3. USAGE                                                      *scaladex-usage*
@@ -41,8 +43,10 @@ Requests run in the background and never block the editor.
     action is applied to it: the dependency line is copied, inserted below
     the cursor, or the package page is opened. See |scaladex-configuration|.
 
-    The pickers use |vim.ui.select()|, so they appear in whichever picker
-    you have set up (Telescope, fzf-lua, snacks.nvim, …).
+    With snacks.nvim's picker enabled the pickers are snacks pickers with
+    previews (|scaladex-snacks|). Otherwise they use |vim.ui.select()|, so
+    they appear in whichever picker you have set up (fzf-lua, mini.pick, …).
+    The `picker` option chooses (|scaladex-configuration|).
 
 :Scaladex! [platform={platform}] [scala={version}] [query]
     Like |:Scaladex|, but opens the module's page on pkg.scalanews.net.
@@ -65,6 +69,9 @@ Calling `setup()` is optional; it only changes the defaults: >lua
       timeout = 10,
       -- what choosing a module does: "copy", "insert" or "open"
       action = "copy",
+      -- the picker :Scaladex uses: "auto" (snacks.nvim when its picker is
+      -- enabled, else vim.ui.select), "snacks" or "select"
+      picker = "auto",
     })
 <
 "copy" puts the dependency line in the unnamed register and, when Neovim has
@@ -80,14 +87,15 @@ The dependency line matches the build of the buffer the search started in:
 - a buffer with `//> using` directives: scala-cli
 - otherwise the nearest build definition above the file:
   `build.sbt`                       sbt     `"org" %% "name" % "1.0"`
-  `build.mill`                      Mill    `mvn"org::name:1.0"`
+  `build.mill`, `build.mill.scala`  Mill    `mvn"org::name:1.0"`
   `build.mill` pinned to Mill 0.x,
   or `build.sc`                     Mill    `ivy"org::name:1.0"`
   `project.scala`, `.scala-build`   scala-cli `//> using dep org::name:1.0`
 - no build found: scala-cli
 
 The Mill version is read from `.mill-version`, `.config/mill-version` or the
-`//| mill-version:` header of `build.mill`; without one Mill 1 is assumed.
+`//| mill-version:` header of `build.mill` or `build.mill.scala`; without one
+Mill 1 is assumed.
 
 A library published only for Scala.js or Scala Native gets the cross-platform
 form: `%%%` for sbt and `::` before the version for Mill and scala-cli. sbt
@@ -112,12 +120,31 @@ An empty value, as in `platform=`, searches every platform even when a
 default is configured.
 
 To change the filters after searching, pick "Change filters…", the first
-entry of the project list (<C-f> in |scaladex-telescope|). You choose a
+entry of the project list (<C-o> in |scaladex-snacks|, <C-f> in
+|scaladex-telescope|). You choose a
 platform, then a Scala version, each listed with how many results it gives
 and the current choice marked with `*`, and the search runs again.
 
 ==============================================================================
-7. TELESCOPE                                              *scaladex-telescope*
+7. SNACKS.NVIM                                               *scaladex-snacks*
+
+When snacks.nvim has its picker enabled, |:Scaladex| uses it, with previews of
+each project and module, ending with the exact line that will be added. Set
+`picker = "snacks"` to use it regardless, or `"select"` to use
+|vim.ui.select()| instead (|scaladex-configuration|). Mappings, in insert
+and normal mode:
+
+  <CR>   apply the configured action (projects: show the modules)
+  <C-s>  open the package page in the browser
+  <C-y>  copy the dependency line (modules only)
+  <C-o>  change the platform and Scala version filters (projects only)
+
+<C-o> is used for the filters because snacks.nvim scrolls the preview with
+<C-f>. The pickers can also be opened from Lua: >lua
+    require("scaladex.snacks").pick({ query = "json", scala_version = "3" })
+<
+==============================================================================
+8. TELESCOPE                                              *scaladex-telescope*
 
 With telescope.nvim, load the extension for pickers with previews: >lua
     require("telescope").load_extension("scaladex")
@@ -136,7 +163,7 @@ Mappings, in insert and normal mode:
   <C-f>  change the platform and Scala version filters (projects only)
 
 ==============================================================================
-8. LUA API                                                      *scaladex-api*
+9. LUA API                                                      *scaladex-api*
 
 All functions are on `require("scaladex")`. Those that make a request run
 in the background when given a callback, which is called on the main loop as
@@ -169,9 +196,9 @@ pick({opts})                                                  *scaladex.pick()*
     `scala_version` and `action`.
 
 ==============================================================================
-9. HEALTH                                                    *scaladex-health*
+10. HEALTH                                                   *scaladex-health*
 
 `:checkhealth scaladex` checks the Neovim version, that `curl` is installed,
-that pkg.scalanews.net answers, and whether Telescope is available.
+that pkg.scalanews.net answers, and which pickers are available.
 
  vim:tw=78:ts=8:ft=help:norl:

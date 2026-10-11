@@ -246,12 +246,37 @@ M.search = function(opts, callback)
   end
 end
 
+--- Whether to use snacks.nvim's picker: always with `picker = "snacks"`, and
+--- with "auto" when snacks.nvim has its picker enabled.
+---@return boolean
+M.use_snacks = function()
+  local picker = config.options.picker
+  if picker == "select" then
+    return false
+  end
+  local ok, snacks = pcall(require, "snacks")
+  if not ok then
+    if picker == "snacks" then
+      M.notify('picker is "snacks" but snacks.nvim is not installed; using vim.ui.select', vim.log.levels.WARN)
+    end
+    return false
+  end
+  -- set by Snacks.setup({ picker = { enabled = true } })
+  local snacks_picker = snacks.config.picker --[[@as { enabled?: boolean }?]]
+  return picker == "snacks" or (snacks_picker ~= nil and snacks_picker.enabled == true)
+end
+
 --- Search, pick a project, pick one of its modules, then copy, insert or open
---- it. The project list starts with an entry for changing the filters, which
+--- it, with snacks.nvim's picker when it is in use (see `use_snacks`) or else
+--- vim.ui.select. The vim.ui.select project list starts with an entry for changing the filters, which
 --- searches again.
 ---@param opts? scaladex.PickOpts
 M.pick = function(opts)
   opts = opts or {}
+  if M.use_snacks() then
+    require("scaladex.snacks").pick(opts)
+    return
+  end
   local origin = M.origin()
   local action = opts.action or config.options.action
 

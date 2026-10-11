@@ -21,6 +21,7 @@ cat >"$config" <<JSON
     "\${3rd}/luv/library",
     "$PWD/deps/telescope.nvim/lua",
     "$PWD/deps/plenary.nvim/lua",
+    "$PWD/deps/snacks.nvim/lua",
     "$PWD/deps/mini.nvim/lua"
   ]
 }

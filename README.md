@@ -13,13 +13,13 @@ Data comes from the [pkg.scalanews.net JSON API](https://pkg.scalanews.net/about
 - Works out the build from the file you are editing: sbt, Mill 1.x and 0.x, and scala-cli
 - Filter by platform (JVM, Scala.js, Scala Native, sbt and Mill plugins) and Scala version, and change the filters from the picker
 - Requests run in the background and never block the editor
-- Uses `vim.ui.select`, so it works with whichever picker you have set up (Telescope, fzf-lua, snacks.nvim, …), plus a Telescope extension with previews
+- Built-in pickers with previews for [snacks.nvim](https://github.com/folke/snacks.nvim) and [Telescope](https://github.com/nvim-telescope/telescope.nvim); anything else goes through `vim.ui.select`, so it works with whichever picker you have set up (fzf-lua, mini.pick, …)
 
 ## Requirements
 
 - Neovim 0.10+
 - `curl`
-- [Telescope](https://github.com/nvim-telescope/telescope.nvim) (optional)
+- [snacks.nvim](https://github.com/folke/snacks.nvim) or [Telescope](https://github.com/nvim-telescope/telescope.nvim) (optional, for pickers with previews)
 
 ## Installation
 
@@ -63,14 +63,14 @@ Search for a platform or Scala version by adding `platform=` and `scala=` to the
 
 `platform` is one of `jvm`, `js`, `native`, `sbt` or `mill`, and `scala` one of `3`, `2.13`, `2.12`, `2.11` or `2.10`. An empty value (`platform=`) searches every platform, even when `setup` sets a default.
 
-To change the filters after searching, pick **Change filters…**, the first entry in the project list (or press `<C-f>` in Telescope). Choose a platform and then a Scala version, each shown with how many results it gives, and the search runs again.
+To change the filters after searching, pick **Change filters…**, the first entry in the project list (or press `<C-o>` in snacks.nvim, `<C-f>` in Telescope). Choose a platform and then a Scala version, each shown with how many results it gives, and the search runs again.
 
 The line matches the build of the file you are editing:
 
 | Build | Line |
 | ----- | ---- |
 | sbt (`build.sbt`) | `"org.typelevel" %% "cats-core" % "2.13.0"` |
-| Mill 1.x (`build.mill`) | `mvn"org.typelevel::cats-core:2.13.0"` |
+| Mill 1.x (`build.mill` or `build.mill.scala`) | `mvn"org.typelevel::cats-core:2.13.0"` |
 | Mill 0.x (`build.sc`, or `build.mill` pinned to 0.x) | `ivy"org.typelevel::cats-core:2.13.0"` |
 | scala-cli (`//> using` directives, `project.scala`, or no build) | `//> using dep org.typelevel::cats-core:2.13.0` |
 
@@ -90,8 +90,24 @@ require("scaladex").setup({
   timeout = 10,
   -- what choosing a module does: "copy", "insert" (below the cursor) or "open"
   action = "copy",
+  -- the picker :Scaladex uses: "auto" (snacks.nvim when its picker is enabled,
+  -- else vim.ui.select), "snacks" or "select"
+  picker = "auto",
 })
 ```
+
+### snacks.nvim
+
+When snacks.nvim has its picker enabled (`picker = { enabled = true }`), `:Scaladex` uses it, with previews of each project and module (including the exact line that will be added).
+
+| Keyboard | What it does |
+| -------- | ------------ |
+| `<CR>` | Projects: show its modules. Modules: copy (or insert/open, per `action`) |
+| `<C-s>` | Open the package page on pkg.scalanews.net |
+| `<C-y>` | Modules: copy the dependency line |
+| `<C-o>` | Projects: change the platform and Scala version filters |
+
+`<C-o>` is used for the filters because snacks.nvim uses `<C-f>` to scroll the preview.
 
 ### Telescope
 
@@ -112,7 +128,7 @@ Then run `:Telescope scaladex`, optionally with `query=http4s platform=jvm scala
 
 ### Health
 
-`:checkhealth scaladex` checks for curl, that pkg.scalanews.net is reachable, and whether Telescope is available.
+`:checkhealth scaladex` checks for curl, that pkg.scalanews.net is reachable, and which pickers are available.
 
 ### Use as a Library
 
