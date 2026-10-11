@@ -99,6 +99,16 @@ T["detect"]["Mill version from the build.mill header"] = function()
   eq(build.detect(old).legacy_mill, true)
 end
 
+T["detect"]["build.mill.scala is Mill 1"] = function()
+  local root, buf = project({ ["build.mill.scala"] = {} })
+  eq(build.detect(buf), { tool = "mill", root = root, legacy_mill = false })
+end
+
+T["detect"]["Mill version from the build.mill.scala header"] = function()
+  local _, buf = project({ ["build.mill.scala"] = { "//| mill-version: 0.12.14" } })
+  eq(build.detect(buf).legacy_mill, true)
+end
+
 T["detect"]["build.sc is legacy Mill"] = function()
   local root, buf = project({ ["build.sc"] = {} })
   eq(build.detect(buf), { tool = "mill", root = root, legacy_mill = true })

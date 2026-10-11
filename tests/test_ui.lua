@@ -22,6 +22,8 @@ local T = MiniTest.new_set({
       vim.notify = real_notify
       vim.ui.select = real_select
       api.search = real_search
+      package.loaded.snacks = nil
+      package.loaded["scaladex.snacks"] = nil
       config.setup()
       vim.cmd("silent! %bwipeout!")
     end,
@@ -155,6 +157,42 @@ T["pick can change filters and search again"] = function()
   })
   eq(shown[1][1], "Change filters (any platform, any Scala version)…")
   eq(shown[4][1], "Change filters (Scala Native, Scala 2.13)…")
+end
+
+T["use_snacks"] = MiniTest.new_set()
+
+T["use_snacks"]["auto: only when the snacks picker is enabled"] = function()
+  eq(ui.use_snacks(), false)
+  package.loaded.snacks = { config = { picker = { enabled = false } } }
+  eq(ui.use_snacks(), false)
+  package.loaded.snacks = { config = { picker = { enabled = true } } }
+  eq(ui.use_snacks(), true)
+end
+
+T["use_snacks"]["select never uses snacks"] = function()
+  package.loaded.snacks = { config = { picker = { enabled = true } } }
+  config.setup({ picker = "select" })
+  eq(ui.use_snacks(), false)
+end
+
+T["use_snacks"]["snacks without snacks.nvim falls back and says so"] = function()
+  config.setup({ picker = "snacks" })
+  eq(ui.use_snacks(), false)
+  eq(notified, { 'picker is "snacks" but snacks.nvim is not installed; using vim.ui.select' })
+  package.loaded.snacks = { config = {} }
+  eq(ui.use_snacks(), true)
+end
+
+T["pick hands over to snacks"] = function()
+  local got
+  package.loaded.snacks = { config = { picker = { enabled = true } } }
+  package.loaded["scaladex.snacks"] = {
+    pick = function(opts)
+      got = opts
+    end,
+  }
+  ui.pick({ query = "cats" })
+  eq(got, { query = "cats" })
 end
 
 return T

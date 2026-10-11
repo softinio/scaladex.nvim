@@ -10,7 +10,10 @@
 
 local M = {}
 
-M.markers = { "build.sbt", "build.mill", "build.sc", "project.scala", ".scala-build" }
+-- Mill 1 builds are build.mill or build.mill.scala
+local mill_builds = { "build.mill", "build.mill.scala" }
+
+M.markers = { "build.sbt", "build.mill", "build.mill.scala", "build.sc", "project.scala", ".scala-build" }
 
 -- scala-cli directives are only read from the top of a file
 local directive_lines = 50
@@ -26,7 +29,7 @@ local function first_line(path)
 end
 
 --- The Mill version a build pins, from .mill-version, .config/mill-version or
---- the `//| mill-version:` header of build.mill.
+--- the `//| mill-version:` header of build.mill or build.mill.scala.
 ---@param root string
 ---@return string?
 M.mill_version = function(root)
@@ -36,12 +39,14 @@ M.mill_version = function(root)
       return version
     end
   end
-  local ok, lines = pcall(vim.fn.readfile, vim.fs.joinpath(root, "build.mill"), "", directive_lines)
-  if ok then
-    for _, line in ipairs(lines) do
-      local version = line:match("^//|%s*mill%-version:%s*(%S+)")
-      if version ~= nil then
-        return version
+  for _, build in ipairs(mill_builds) do
+    local ok, lines = pcall(vim.fn.readfile, vim.fs.joinpath(root, build), "", directive_lines)
+    if ok then
+      for _, line in ipairs(lines) do
+        local version = line:match("^//|%s*mill%-version:%s*(%S+)")
+        if version ~= nil then
+          return version
+        end
       end
     end
   end
@@ -91,7 +96,9 @@ M.detect = function(source)
   local root = vim.fs.dirname(found)
   if exists(vim.fs.joinpath(root, "build.sbt")) then
     return { tool = "sbt", root = root }
-  elseif exists(vim.fs.joinpath(root, "build.mill")) then
+  elseif vim.iter(mill_builds):any(function(build)
+    return exists(vim.fs.joinpath(root, build))
+  end) then
     local version = M.mill_version(root)
     return { tool = "mill", root = root, legacy_mill = version ~= nil and vim.startswith(version, "0.") }
   elseif exists(vim.fs.joinpath(root, "build.sc")) then

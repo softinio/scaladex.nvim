@@ -24,6 +24,10 @@ T["rejects bad options"] = function()
     ---@diagnostic disable-next-line: assign-type-mismatch
     config.setup({ timeout = "10" })
   end, "timeout must be a number")
+  MiniTest.expect.error(function()
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    config.setup({ picker = "fzf" })
+  end, "picker must be one of")
 end
 
 return T
