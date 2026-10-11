@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Type-checks the plugin with lua-language-server against Neovim's runtime and
+# the development dependencies (make deps).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+vimruntime=$(nvim --clean --headless --cmd 'lua io.write(vim.env.VIMRUNTIME)' --cmd q)
+config=$(mktemp -t scaladex-luarc.XXXXXX)
+log=$(mktemp -d -t scaladex-luals.XXXXXX)
+trap 'rm -rf "$config" "$log"' EXIT
+
+cat >"$config" <<JSON
+{
+  "runtime.version": "LuaJIT",
+  "runtime.path": ["lua/?.lua", "lua/?/init.lua"],
+  "diagnostics.globals": ["MiniTest"],
+  "workspace.checkThirdParty": false,
+  "workspace.ignoreDir": ["deps"],
+  "workspace.library": [
+    "$vimruntime/lua",
+    "\${3rd}/luv/library",
+    "$PWD/deps/telescope.nvim/lua",
+    "$PWD/deps/plenary.nvim/lua",
+    "$PWD/deps/mini.nvim/lua"
+  ]
+}
+JSON
+
+lua-language-server --check "$PWD" --configpath "$config" --checklevel Warning --logpath "$log"
