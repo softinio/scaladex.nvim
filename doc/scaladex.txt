@@ -8,9 +8,10 @@ CONTENTS                                                   *scaladex-contents*
   3. Usage ...................................... |scaladex-usage|
   4. Configuration .............................. |scaladex-configuration|
   5. Build tools ................................ |scaladex-build-tools|
-  6. Telescope .................................. |scaladex-telescope|
-  7. Lua API .................................... |scaladex-api|
-  8. Health ..................................... |scaladex-health|
+  6. Filters .................................... |scaladex-filters|
+  7. Telescope .................................. |scaladex-telescope|
+  8. Lua API .................................... |scaladex-api|
+  9. Health ..................................... |scaladex-health|
 
 ==============================================================================
 1. INTRODUCTION                                        *scaladex-introduction*
@@ -33,8 +34,9 @@ Requests run in the background and never block the editor.
 3. USAGE                                                      *scaladex-usage*
 
                                                                    *:Scaladex*
-:Scaladex [query]
-    Search for [query], or ask for it when left out. Pick a project, then
+:Scaladex [platform={platform}] [scala={version}] [query]
+    Search for [query], or ask for it when left out, with the given filters
+    (see |scaladex-filters|). Pick a project, then
     one of its modules (skipped when it has only one), and the configured
     action is applied to it: the dependency line is copied, inserted below
     the cursor, or the package page is opened. See |scaladex-configuration|.
@@ -42,7 +44,7 @@ Requests run in the background and never block the editor.
     The pickers use |vim.ui.select()|, so they appear in whichever picker
     you have set up (Telescope, fzf-lua, snacks.nvim, …).
 
-:Scaladex! [query]
+:Scaladex! [platform={platform}] [scala={version}] [query]
     Like |:Scaladex|, but opens the module's page on pkg.scalanews.net.
 
 Example mapping: >lua
@@ -93,7 +95,29 @@ plugins always get `addSbtPlugin(...)`, and Mill plugins a `//| mvnDeps:`
 header entry (`import $ivy` for Mill 0.x).
 
 ==============================================================================
-6. TELESCOPE                                              *scaladex-telescope*
+6. FILTERS                                                  *scaladex-filters*
+
+Searches can be limited to one platform and one Scala version:
+
+  platform   `jvm`, `js` (Scala.js), `native` (Scala Native), `sbt` (sbt
+             plugins) or `mill` (Mill plugins)
+  scala      `3`, `2.13`, `2.12`, `2.11` or `2.10`
+
+Set them for every search with `platform` and `scala_version` in
+|scaladex-configuration|, or for one search as |:Scaladex| arguments, which
+complete with <Tab>: >vim
+    :Scaladex platform=js scala=3 json parser
+<
+An empty value, as in `platform=`, searches every platform even when a
+default is configured.
+
+To change the filters after searching, pick "Change filters…", the first
+entry of the project list (<C-f> in |scaladex-telescope|). You choose a
+platform, then a Scala version, each listed with how many results it gives
+and the current choice marked with `*`, and the search runs again.
+
+==============================================================================
+7. TELESCOPE                                              *scaladex-telescope*
 
 With telescope.nvim, load the extension for pickers with previews: >lua
     require("telescope").load_extension("scaladex")
@@ -102,16 +126,17 @@ Then use `:Telescope scaladex` or
 `require("telescope").extensions.scaladex.search(opts)`. Besides the usual
 Telescope options, `opts` takes `query`, `platform`, `scala_version` and
 `action`: >
-    :Telescope scaladex query=http4s scala_version=3
+    :Telescope scaladex query=http4s platform=jvm scala_version=3
 <
 Mappings, in insert and normal mode:
 
   <CR>   apply the configured action (projects: show the modules)
   <C-s>  open the package page in the browser
   <C-y>  copy the dependency line (modules only)
+  <C-f>  change the platform and Scala version filters (projects only)
 
 ==============================================================================
-7. LUA API                                                      *scaladex-api*
+8. LUA API                                                      *scaladex-api*
 
 All functions are on `require("scaladex")`. Those that make a request run
 in the background when given a callback, which is called on the main loop as
@@ -120,10 +145,12 @@ in the background when given a callback, which is called on the main loop as
 
 search({query}, {opts}, {callback})                         *scaladex.search()*
     Searches pkg.scalanews.net. {opts} may set `platform`, `scala_version`
-    and `page`; filters left out fall back to the configured ones. Returns a
-    list of projects, each with `title`, `key` and `packages`: the modules
-    worth showing for the query (`groupId`, `name`, `latestVersion`,
-    `targets`, `project`, …).
+    and `page` (see |scaladex-filters|); filters left out fall back to the
+    configured ones, and `""` means any. Returns a list of projects, each
+    with `title`, `key` and `packages`: the modules worth showing for the
+    query (`groupId`, `name`, `latestVersion`, `targets`, `project`, …).
+    The whole response is passed last, after the error: `total`, `results`
+    and `facets`, the result counts per platform and Scala version.
 
 get_package({group_id}, {name}, {callback})            *scaladex.get_package()*
     Gets one package, e.g. `("org.typelevel", "cats-core")`: its `summary`
@@ -142,7 +169,7 @@ pick({opts})                                                  *scaladex.pick()*
     `scala_version` and `action`.
 
 ==============================================================================
-8. HEALTH                                                    *scaladex-health*
+9. HEALTH                                                    *scaladex-health*
 
 `:checkhealth scaladex` checks the Neovim version, that `curl` is installed,
 that pkg.scalanews.net answers, and whether Telescope is available.

@@ -43,13 +43,42 @@ local http = require("scaladex.http")
 ---@field install scaladex.Snippet[]
 
 ---@class scaladex.SearchOpts
----@field platform? string jvm, js, native, sbt or mill
----@field scala_version? string e.g. 3 or 2.13
+---@field platform? string jvm, js, native, sbt or mill; "" for any, overriding the configured default
+---@field scala_version? string|number 3, 2.13, 2.12, 2.11 or 2.10; "" for any, overriding the configured default
 ---@field page? integer 1-based
+
+---@class scaladex.Facets
+---@field platforms table<string, integer> result counts per platform
+---@field scalaVersions table<string, integer> result counts per Scala version
+
+--- The whole search response; `facets` counts results per filter value as if
+--- that filter were not set, so each option shows how many results it gives.
+---@class scaladex.SearchResponse
+---@field total integer results (projects), across all pages
+---@field results scaladex.SearchHit[]
+---@field facets scaladex.Facets
+---@field related boolean no result is about the query, only related to it
 
 local M = {}
 
 M.platforms = { "jvm", "js", "native", "sbt", "mill" }
+
+-- the Scala versions the API filters on, newest first
+M.scala_versions = { "3", "2.13", "2.12", "2.11", "2.10" }
+
+--- A Scala version as a string. Numbers come from `:Telescope scaladex
+--- scala_version=2.10`, which passes 2.1, so they map to the supported version
+--- they equal.
+---@param version? string|number
+---@return string? version
+M.scala_version = function(version)
+  if type(version) == "number" then
+    return vim.iter(M.scala_versions):find(function(v)
+      return tonumber(v) == version
+    end) or tostring(version)
+  end
+  return version and vim.trim(version)
+end
 
 --- Query-string pairs for a search, or an error message for a bad filter.
 ---@param query string
@@ -65,8 +94,11 @@ M.search_params = function(query, opts)
     end
     table.insert(params, { "platform", platform })
   end
-  local scala = opts.scala_version and vim.trim(opts.scala_version) or ""
+  local scala = M.scala_version(opts.scala_version) or ""
   if scala ~= "" then
+    if not vim.tbl_contains(M.scala_versions, scala) then
+      return nil, "unsupported Scala version " .. scala .. ", expected one of " .. table.concat(M.scala_versions, ", ")
+    end
     table.insert(params, { "scala", scala })
   end
   if opts.page ~= nil and opts.page > 1 then
@@ -97,12 +129,13 @@ end
 --- projects, each with the modules worth showing for the query.
 ---
 --- With a callback the request runs in the background; without one it blocks
---- and returns the results.
+--- and returns the results. Either way the whole response comes last.
 ---@param query string
 ---@param opts? scaladex.SearchOpts
----@param callback? fun(err: string?, results: scaladex.SearchHit[]?)
+---@param callback? fun(err: string?, results: scaladex.SearchHit[]?, response: scaladex.SearchResponse?)
 ---@return scaladex.SearchHit[]? results
 ---@return string? err
+---@return scaladex.SearchResponse? response
 M.search = function(query, opts, callback)
   if query == nil or vim.trim(query) == "" then
     return finish(callback, nil, {})
@@ -124,12 +157,12 @@ M.search = function(query, opts, callback)
 
   if callback then
     http.get(url, options.timeout, function(err, body)
-      callback(err, results(err, body))
+      callback(err, results(err, body), err == nil and body or nil)
     end)
     return nil, nil
   end
   local body, err = http.get(url, options.timeout)
-  return results(err, body), err
+  return results(err, body), err, err == nil and body or nil
 end
 
 --- Gets one package: a groupId plus the artifact name without its Scala suffix,

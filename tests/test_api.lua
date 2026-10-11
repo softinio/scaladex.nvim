@@ -41,6 +41,27 @@ T["search_params"] = function()
   local params, err = api.search_params("cats", { platform = "android" })
   eq(params, nil)
   eq(err, "unknown platform android, expected one of jvm, js, native, sbt, mill")
+  params, err = api.search_params("cats", { scala_version = "2.9" })
+  eq(params, nil)
+  eq(err, "unsupported Scala version 2.9, expected one of 3, 2.13, 2.12, 2.11, 2.10")
+end
+
+T["Scala versions as numbers"] = function()
+  eq(api.search_params("cats", { scala_version = 2.1 }), { { "q", "cats" }, { "scala", "2.10" } })
+  eq(api.search_params("cats", { scala_version = 3 }), { { "q", "cats" }, { "scala", "3" } })
+end
+
+T["empty filters override configured ones"] = function()
+  config.setup({ platform = "jvm", scala_version = "3" })
+  api.search("cats", { platform = "", scala_version = "" })
+  eq(requested, { "https://pkg.scalanews.net/api/v1/search?q=cats" })
+end
+
+T["search returns the whole response last"] = function()
+  local results, err, response = api.search("cats")
+  eq(results, { { title = "cats" } })
+  eq(err, nil)
+  eq(response, { results = { { title = "cats" } } })
 end
 
 T["search blocks without a callback"] = function()
@@ -67,6 +88,14 @@ T["search calls back"] = function()
     return got ~= nil
   end)
   eq(got, { results = { { title = "cats" } } })
+  local response
+  api.search("cats", nil, function(_, _, r)
+    response = r
+  end)
+  vim.wait(1000, function()
+    return response ~= nil
+  end)
+  eq(response, { results = { { title = "cats" } } })
 end
 
 T["empty search makes no request"] = function()

@@ -10,6 +10,33 @@ local platform_labels = {
   mill = "Mill plugin",
 }
 
+-- the API's platform filter values
+local facet_labels = {
+  jvm = "JVM",
+  js = "Scala.js",
+  native = "Scala Native",
+  sbt = "sbt plugins",
+  mill = "Mill plugins",
+}
+
+---@param platform string a platform filter value, e.g. js
+---@return string
+M.platform = function(platform)
+  return facet_labels[platform] or platform
+end
+
+--- The filters a search uses, e.g. `Scala.js, Scala 3` or `any platform, any
+--- Scala version`. "" or nil means any.
+---@param filters { platform?: string, scala_version?: string }
+---@return string
+M.filters = function(filters)
+  local platform = filters.platform or ""
+  local scala = filters.scala_version or ""
+  return (platform ~= "" and M.platform(platform) or "any platform")
+    .. ", "
+    .. (scala ~= "" and ("Scala " .. scala) or "any Scala version")
+end
+
 --- Groups target keys (jvm:3, sjs1:2.13, …) by platform, e.g.
 --- `JVM: 3, 2.13` and `Scala.js 1: 3, 2.13`, in the order they first appear.
 ---@param targets string[]

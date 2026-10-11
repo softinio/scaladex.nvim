@@ -13,9 +13,10 @@ end
 --- background; without one it blocks and returns the results.
 ---@param query string
 ---@param opts? scaladex.SearchOpts
----@param callback? fun(err: string?, results: scaladex.SearchHit[]?)
+---@param callback? fun(err: string?, results: scaladex.SearchHit[]?, response: scaladex.SearchResponse?)
 ---@return scaladex.SearchHit[]? results
 ---@return string? err
+---@return scaladex.SearchResponse? response
 M.search = function(query, opts, callback)
   return require("scaladex.api").search(query, opts, callback)
 end

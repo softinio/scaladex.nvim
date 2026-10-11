@@ -98,37 +98,157 @@ end
 ---@field query? string asked for when left out
 ---@field action? scaladex.Action defaults to the configured action
 
+---@class scaladex.Filters: scaladex.SearchOpts
+---@field platform string "" for any
+---@field scala_version string "" for any
+
+--- The filters a search uses: those in `opts`, else the configured ones.
+---@param opts scaladex.SearchOpts
+---@return scaladex.Filters
+M.filters = function(opts)
+  local function pick(value, default)
+    if value ~= nil then
+      return vim.trim(value)
+    end
+    return default and vim.trim(default) or ""
+  end
+  return {
+    platform = pick(opts.platform, config.options.platform):lower(),
+    scala_version = pick(api.scala_version(opts.scala_version), config.options.scala_version),
+  }
+end
+
+-- `:Scaladex` arguments that set a filter instead of being part of the query
+local filter_args = { platform = "platform", scala = "scala_version", scala_version = "scala_version" }
+
+--- Splits `:Scaladex` arguments into the query and filters, e.g.
+--- `platform=js scala=3 json parser`. `platform=` or `scala=` alone means any.
+---@param args string
+---@return scaladex.PickOpts
+M.parse_args = function(args)
+  local opts, words = {}, {}
+  for _, word in ipairs(vim.split(vim.trim(args), "%s+", { trimempty = true })) do
+    local key, value = word:match("^([%w_]+)=(.*)$")
+    if key ~= nil and filter_args[key] ~= nil then
+      opts[filter_args[key]] = value
+    else
+      table.insert(words, word)
+    end
+  end
+  if #words > 0 then
+    opts.query = table.concat(words, " ")
+  end
+  return opts
+end
+
+--- Completion for `:Scaladex`: the filter arguments and their values.
+---@param arglead string
+---@return string[]
+M.complete = function(arglead)
+  local candidates = {}
+  for _, platform in ipairs(api.platforms) do
+    table.insert(candidates, "platform=" .. platform)
+  end
+  for _, version in ipairs(api.scala_versions) do
+    table.insert(candidates, "scala=" .. version)
+  end
+  return vim.tbl_filter(function(c)
+    return vim.startswith(c, arglead)
+  end, candidates)
+end
+
+--- Asks for a platform, then a Scala version, each with how many results it
+--- gives when the counts are known. Calls back only when both are chosen.
+---@param current scaladex.Filters
+---@param facets? scaladex.Facets
+---@param callback fun(filters: scaladex.Filters)
+M.choose_filters = function(current, facets, callback)
+  ---@param values string[]
+  ---@param counts? table<string, integer>
+  ---@param any string
+  ---@param label fun(value: string): string
+  ---@param selected string
+  ---@param prompt string
+  ---@param next fun(value: string)
+  local function choose(values, counts, any, label, selected, prompt, next)
+    local items = vim.list_extend({ "" }, values)
+    vim.ui.select(items, {
+      prompt = prompt,
+      kind = "scaladex.filter",
+      format_item = function(value)
+        local line = value == "" and any or label(value)
+        if counts ~= nil and value ~= "" then
+          line = line .. " (" .. (counts[value] or 0) .. ")"
+        end
+        return (value == selected and "* " or "  ") .. line
+      end,
+    }, function(value)
+      if value ~= nil then
+        next(value)
+      end
+    end)
+  end
+
+  choose(
+    api.platforms,
+    facets and facets.platforms,
+    "Any platform",
+    format.platform,
+    current.platform,
+    "Platform",
+    function(platform)
+      choose(
+        api.scala_versions,
+        facets and facets.scalaVersions,
+        "Any Scala version",
+        function(v)
+          return "Scala " .. v
+        end,
+        current.scala_version,
+        "Scala version",
+        function(scala)
+          callback({ platform = platform, scala_version = scala })
+        end
+      )
+    end
+  )
+end
+
 --- Asks for the query when it is not given, then calls back with the results.
 --- Errors and empty results are reported and do not call back.
 ---@param opts scaladex.PickOpts
----@param callback fun(hits: scaladex.SearchHit[], query: string)
+---@param callback fun(hits: scaladex.SearchHit[], query: string, response: scaladex.SearchResponse)
 M.search = function(opts, callback)
+  local filters = M.filters(opts)
+
   local function run(query)
     if query == nil or vim.trim(query) == "" then
       return
     end
     vim.api.nvim_echo({ { "Searching for " .. query .. "…" } }, false, {})
-    api.search(query, { platform = opts.platform, scala_version = opts.scala_version }, function(err, hits)
+    api.search(query, filters, function(err, hits, response)
       vim.api.nvim_echo({ { "" } }, false, {})
       if err ~= nil then
         M.notify("Search failed: " .. err, vim.log.levels.ERROR)
-      elseif hits == nil or #hits == 0 then
-        M.notify("No results for " .. query, vim.log.levels.WARN)
+      elseif hits == nil or #hits == 0 or response == nil then
+        M.notify("No results for " .. query .. " (" .. format.filters(filters) .. ")", vim.log.levels.WARN)
       else
-        callback(hits, query)
+        callback(hits, query, response)
       end
     end)
   end
 
-  if opts.query ~= nil and vim.trim(opts.query) ~= "" then
-    run(opts.query)
+  local query = opts.query ~= nil and tostring(opts.query) or ""
+  if vim.trim(query) ~= "" then
+    run(query)
   else
     vim.ui.input({ prompt = "Search Scala packages: " }, run)
   end
 end
 
 --- Search, pick a project, pick one of its modules, then copy, insert or open
---- it.
+--- it. The project list starts with an entry for changing the filters, which
+--- searches again.
 ---@param opts? scaladex.PickOpts
 M.pick = function(opts)
   opts = opts or {}
@@ -151,14 +271,26 @@ M.pick = function(opts)
     end)
   end
 
-  M.search(opts, function(hits)
-    vim.ui.select(hits, {
+  M.search(opts, function(hits, query, response)
+    local filters = M.filters(opts)
+    local change = { filters = true }
+    local items = vim.list_extend({ change }, hits)
+    vim.ui.select(items, {
       prompt = "Project",
       kind = "scaladex.project",
-      format_item = format.hit,
-    }, function(hit)
-      if hit ~= nil then
-        choose_module(hit.packages)
+      format_item = function(item)
+        if item == change then
+          return "Change filters (" .. format.filters(filters) .. ")…"
+        end
+        return format.hit(item)
+      end,
+    }, function(item)
+      if item == change then
+        M.choose_filters(filters, response.facets, function(chosen)
+          M.pick(vim.tbl_extend("force", opts, chosen, { query = query }))
+        end)
+      elseif item ~= nil then
+        choose_module(item.packages)
       end
     end)
   end)

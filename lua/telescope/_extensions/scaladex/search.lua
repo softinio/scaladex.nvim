@@ -80,10 +80,12 @@ end
 ---@param hits scaladex.SearchHit[]
 ---@param query string
 ---@param origin scaladex.Origin
-M.projects = function(opts, hits, query, origin)
+---@param response scaladex.SearchResponse
+M.projects = function(opts, hits, query, origin, response)
+  local filters = ui.filters(opts)
   pickers
     .new(opts, {
-      prompt_title = "Projects for " .. query,
+      prompt_title = "Projects for " .. query .. " (" .. format.filters(filters) .. ")",
       sorter = conf.generic_sorter(opts),
       previewer = previewer(format.hit_preview),
       finder = finders.new_table({
@@ -110,6 +112,12 @@ M.projects = function(opts, hits, query, origin)
               ui.open(hit.packages[1])
             end)
           end, { desc = "open the project's main package page" })
+          map(mode, "<C-f>", function()
+            actions.close(prompt_bufnr)
+            ui.choose_filters(filters, response.facets, function(chosen)
+              M.run(vim.tbl_extend("force", opts, chosen, { query = query }), origin)
+            end)
+          end, { desc = "change the platform and Scala version filters" })
         end
         return true
       end,
@@ -121,10 +129,14 @@ end
 --- Telescope options plus `query`, `platform`, `scala_version` and `action`.
 ---@param opts? table
 M.search = function(opts)
-  opts = opts or {}
-  local origin = ui.origin()
-  ui.search(opts, function(hits, query)
-    M.projects(opts, hits, query, origin)
+  M.run(opts or {}, ui.origin())
+end
+
+---@param opts table
+---@param origin scaladex.Origin
+M.run = function(opts, origin)
+  ui.search(opts, function(hits, query, response)
+    M.projects(opts, hits, query, origin, response)
   end)
 end
 

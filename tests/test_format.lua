@@ -45,6 +45,12 @@ T["hit line prefers the summary"] = function()
   )
 end
 
+T["filters"] = function()
+  eq(format.filters({}), "any platform, any Scala version")
+  eq(format.filters({ platform = "js", scala_version = "3" }), "Scala.js, Scala 3")
+  eq(format.filters({ platform = "", scala_version = "2.13" }), "any platform, Scala 2.13")
+end
+
 T["package line"] = function()
   eq(format.package(cats), "cats-core 2.13.0")
   eq(format.package(vim.tbl_extend("force", cats, { deprecated = true })), "cats-core 2.13.0 (deprecated)")
