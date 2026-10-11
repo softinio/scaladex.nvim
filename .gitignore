@@ -39,3 +39,9 @@ luac.out
 *.x86_64
 *.hex
 
+
+# Development dependencies (make deps)
+deps/
+
+# Generated help tags
+doc/tags

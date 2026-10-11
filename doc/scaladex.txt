@@ -1,0 +1,150 @@
+*scaladex.txt*  Search Scala libraries and add them to your build
+
+==============================================================================
+CONTENTS                                                   *scaladex-contents*
+
+  1. Introduction ............................... |scaladex-introduction|
+  2. Requirements ............................... |scaladex-requirements|
+  3. Usage ...................................... |scaladex-usage|
+  4. Configuration .............................. |scaladex-configuration|
+  5. Build tools ................................ |scaladex-build-tools|
+  6. Telescope .................................. |scaladex-telescope|
+  7. Lua API .................................... |scaladex-api|
+  8. Health ..................................... |scaladex-health|
+
+==============================================================================
+1. INTRODUCTION                                        *scaladex-introduction*
+
+scaladex.nvim searches Scala Packages (https://pkg.scalanews.net), an index
+of every Scala library on Maven Central, and adds the one you pick to your
+build. Search finds libraries by what they do as well as by name, so a query
+like `parse markdown` works.
+
+Requests run in the background and never block the editor.
+
+==============================================================================
+2. REQUIREMENTS                                        *scaladex-requirements*
+
+- Neovim 0.10 or later
+- `curl` on your `PATH`
+- Optional: telescope.nvim, for |scaladex-telescope|
+
+==============================================================================
+3. USAGE                                                      *scaladex-usage*
+
+                                                                   *:Scaladex*
+:Scaladex [query]
+    Search for [query], or ask for it when left out. Pick a project, then
+    one of its modules (skipped when it has only one), and the configured
+    action is applied to it: the dependency line is copied, inserted below
+    the cursor, or the package page is opened. See |scaladex-configuration|.
+
+    The pickers use |vim.ui.select()|, so they appear in whichever picker
+    you have set up (Telescope, fzf-lua, snacks.nvim, …).
+
+:Scaladex! [query]
+    Like |:Scaladex|, but opens the module's page on pkg.scalanews.net.
+
+Example mapping: >lua
+    vim.keymap.set("n", "<leader>si", "<cmd>Scaladex<cr>", { desc = "Search Scala packages" })
+<
+
+==============================================================================
+4. CONFIGURATION                                      *scaladex-configuration*
+
+Calling `setup()` is optional; it only changes the defaults: >lua
+    require("scaladex").setup({
+      -- pkg.scalanews.net, or another instance of it
+      base_url = "https://pkg.scalanews.net",
+      -- default filters; nil does not filter
+      platform = nil,      -- "jvm", "js", "native", "sbt" or "mill"
+      scala_version = nil, -- e.g. "3" or "2.13"
+      -- seconds before a request is abandoned
+      timeout = 10,
+      -- what choosing a module does: "copy", "insert" or "open"
+      action = "copy",
+    })
+<
+"copy" puts the dependency line in the unnamed register and, when Neovim has
+a clipboard, the system clipboard. "insert" puts it below the cursor line,
+indented like that line. "open" opens the module's page in the browser with
+|vim.ui.open()|.
+
+==============================================================================
+5. BUILD TOOLS                                          *scaladex-build-tools*
+
+The dependency line matches the build of the buffer the search started in:
+
+- a buffer with `//> using` directives: scala-cli
+- otherwise the nearest build definition above the file:
+  `build.sbt`                       sbt     `"org" %% "name" % "1.0"`
+  `build.mill`                      Mill    `mvn"org::name:1.0"`
+  `build.mill` pinned to Mill 0.x,
+  or `build.sc`                     Mill    `ivy"org::name:1.0"`
+  `project.scala`, `.scala-build`   scala-cli `//> using dep org::name:1.0`
+- no build found: scala-cli
+
+The Mill version is read from `.mill-version`, `.config/mill-version` or the
+`//| mill-version:` header of `build.mill`; without one Mill 1 is assumed.
+
+A library published only for Scala.js or Scala Native gets the cross-platform
+form: `%%%` for sbt and `::` before the version for Mill and scala-cli. sbt
+plugins always get `addSbtPlugin(...)`, and Mill plugins a `//| mvnDeps:`
+header entry (`import $ivy` for Mill 0.x).
+
+==============================================================================
+6. TELESCOPE                                              *scaladex-telescope*
+
+With telescope.nvim, load the extension for pickers with previews: >lua
+    require("telescope").load_extension("scaladex")
+<
+Then use `:Telescope scaladex` or
+`require("telescope").extensions.scaladex.search(opts)`. Besides the usual
+Telescope options, `opts` takes `query`, `platform`, `scala_version` and
+`action`: >
+    :Telescope scaladex query=http4s scala_version=3
+<
+Mappings, in insert and normal mode:
+
+  <CR>   apply the configured action (projects: show the modules)
+  <C-s>  open the package page in the browser
+  <C-y>  copy the dependency line (modules only)
+
+==============================================================================
+7. LUA API                                                      *scaladex-api*
+
+All functions are on `require("scaladex")`. Those that make a request run
+in the background when given a callback, which is called on the main loop as
+`callback(err, value)`. Without a callback they block and return
+`value, err`.
+
+search({query}, {opts}, {callback})                         *scaladex.search()*
+    Searches pkg.scalanews.net. {opts} may set `platform`, `scala_version`
+    and `page`; filters left out fall back to the configured ones. Returns a
+    list of projects, each with `title`, `key` and `packages`: the modules
+    worth showing for the query (`groupId`, `name`, `latestVersion`,
+    `targets`, `project`, …).
+
+get_package({group_id}, {name}, {callback})            *scaladex.get_package()*
+    Gets one package, e.g. `("org.typelevel", "cats-core")`: its `summary`
+    and `install` snippets for sbt, Mill and scala-cli. Nil when there is no
+    such package.
+
+package_url({group_id}, {name})                        *scaladex.package_url()*
+    The pkg.scalanews.net page of a package.
+
+dependency({package}, {buf})                            *scaladex.dependency()*
+    The line that adds a package (one of a search result's `packages`) to
+    the build of buffer {buf} (default: current). See |scaladex-build-tools|.
+
+pick({opts})                                                  *scaladex.pick()*
+    What |:Scaladex| runs. {opts} may set `query`, `platform`,
+    `scala_version` and `action`.
+
+==============================================================================
+8. HEALTH                                                    *scaladex-health*
+
+`:checkhealth scaladex` checks the Neovim version, that `curl` is installed,
+that pkg.scalanews.net answers, and whether Telescope is available.
+
+ vim:tw=78:ts=8:ft=help:norl:
